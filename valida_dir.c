@@ -5,7 +5,8 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include "vector.c"
-
+#include <sys/stat.h>
+#include <fcntl.h>
 
 int nprocess = 12, groups = 4, position_queue = -1;
 
@@ -14,16 +15,22 @@ Vector_pointers_char* queue;
 
 pid_t sons[4];
 
+int fds[4];
 
-void create_multiple_child_process(int* sons, int num_childdren, void(*action)(int*));
 
-void create_child_process(int* sons, int index, void(*action)(int*));
+void create_multiple_child_process(int* sons, int num_childdren, void(*action)(char*));
 
-void consume_queue(int* ptr);
+void create_child_process(int* sons, int index, void(*action)(char*));
+
+void consume_file(char* path);
 
 void search_files(char* dir);
 
 int get_index_from_value(int* list, int size, int value);
+
+int count_slash_from_string(char* str, int size);
+
+Vector_chars* get_name_file_without_path(char* str, int size);
 
 void handler(int sig) {
 	int child_status;
@@ -34,12 +41,12 @@ void handler(int sig) {
 	//printf("termina: %d\n", wpid);
 
 	//nprocess--;
-	printf("Quedan %d paths por consumir\n", position_queue);
+	//printf("Quedan %d paths por consumir\n", position_queue);
 
 	int index_free = get_index_from_value(sons, 4, wpid);
 	//printf("Termina el hueco %d -> (%d)\n", index_free, wpid);
-	create_child_process(sons, index_free, consume_queue);
-	printf("Empieza uno nuevo en el hueco %d\n", index_free);
+	create_child_process(sons, index_free, consume_file);
+	//printf("Empieza uno nuevo en el hueco %d\n", index_free);
 	printf("Se va consumir la <ruta>: %s\n", queue->list[position_queue].list);
 	position_queue--;
 
@@ -56,12 +63,12 @@ int main(int argc, char** argv)
   	search_files("ficheros/");
 
   	position_queue = queue->data.size-1;
-  	printf("%d\n", position_queue);
+  	//rintf("%d\n", position_queue);
 
   	i = 0;
   	while(i < 4) {
   		printf("Se va a consumir la ruta: %s\n", queue->list[position_queue].list);
-  		create_child_process(sons, i, consume_queue);
+  		create_child_process(sons, i, consume_file);
   		i++;
   		position_queue--;
   	}
@@ -75,7 +82,7 @@ int main(int argc, char** argv)
 	exit(0);
 }
 
-void create_multiple_child_process(int* sons, int num_childdren, void(*action)(int*)) {
+void create_multiple_child_process(int* sons, int num_childdren, void(*action)(char*)) {
 	int i = 0;
 	while(i < num_childdren) {
 		if((sons[i] = fork()) == 0) {
@@ -88,11 +95,29 @@ void create_multiple_child_process(int* sons, int num_childdren, void(*action)(i
 	}
 }
 
-void create_child_process(int* sons, int index, void(*action)(int*)) {
+void create_child_process(int* sons, int index, void(*action)(char*)) {
 	if((sons[index] = fork()) == 0) {
 		//printf("Soy el hijo %d (%d) y mi padre es: %d\n", index, getpid(), getppid());
+
+		//printf("Voy a consumir: %s\n", queue->list[position_queue].list)
+
+		Vector_chars* name_file = get_name_file_without_path(queue->list[position_queue].list, queue->list[position_queue].data.size);
+
+		char* pre_name = "soluciones/validator-";
+		char* filename = (char*)malloc(sizeof(pre_name)*strlen(name_file->list));
+		strcpy(filename, pre_name);
+		strcat(filename, name_file->list);
+		//printf("%s\n", filename);
+
+		fds[index] = open(filename, O_RDWR|O_CREAT);
+		//printf("%d\n",fds[index]);
+		if(fds[index] != -1) {
+			dup2(fds[index], 1);
+			char* args[] = {"valida_uno",queue->list[position_queue].list};
+			execve("valida_uno", args, NULL);
+		}
 		kill(getppid(), SIGUSR1);
-		exit(1);
+		exit(0);
 	}
 }
 
@@ -110,7 +135,7 @@ int get_index_from_value(int* list, int size, int value) {
 
 }
 
-void consume_queue(int* ptr) {
+void consume_file(char* path) {
 	//consume
 }
 
@@ -168,14 +193,49 @@ void search_files(char* dir) {
 
         int i = queue->data.size-1;
 
-        printf("Elementos: \n");
+        /*printf("Elementos: \n");
 
         while(i >= 0) {
         	printf("%s\n", queue->list[i].list);
         	i--;
         }
-        printf("\n\n");
+        printf("\n\n");*/
+	}
+}
+
+int count_slash_from_string(char* str, int size) {
+	int slashs  = 0;
+
+	while(size >= 0) {
+		if(str[size] == '/')
+			slashs++;
+		size--;
 	}
 
-	
+	return slashs;
 }
+
+Vector_chars* get_name_file_without_path(char* str, int size) {
+	Vector_chars* result;
+
+	result = create_vector_of_chars(15);
+
+	int slashs = count_slash_from_string(str, size);
+	int i = 0;
+
+	while(i < size) {
+		if(slashs == 0) {
+			push_back_char(result, str[i]);
+		}
+
+		if(str[i] == '/') {
+			slashs--;
+		}
+		i++;
+	}
+
+	//printf("Cadena after: %s | before: %s\n", str, result->list);
+
+	return result;
+}
+
