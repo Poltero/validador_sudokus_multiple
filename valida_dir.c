@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-int nprocess = 12, groups = 4, position_queue = -1;
+int nprocess = 12, groups = 4, position_queue = -1, child_status;
 
 
 Vector_pointers_char* queue;
@@ -37,17 +37,9 @@ void handler(int sig) {
 
 	pid_t wpid = wait(&child_status);
 
-
-	//printf("termina: %d\n", wpid);
-
-	//nprocess--;
-	//printf("Quedan %d paths por consumir\n", position_queue);
-
 	int index_free = get_index_from_value(sons, 4, wpid);
-	//printf("Termina el hueco %d -> (%d)\n", index_free, wpid);
+	printf("Creamos otro hijo en el hueco %d\n", index_free);
 	create_child_process(sons, index_free, consume_file);
-	//printf("Empieza uno nuevo en el hueco %d\n", index_free);
-	printf("Se va consumir la <ruta>: %s\n", queue->list[position_queue].list);
 	position_queue--;
 
 }
@@ -56,69 +48,55 @@ int main(int argc, char** argv)
 {
   	int child_status, i;
 
-  	signal (SIGUSR1, handler);
+  	
 
   	//create_multiple_child_process(sons, 4, consume_queue);
 
   	search_files("ficheros/");
 
-  	position_queue = queue->data.size-1;
-  	//rintf("%d\n", position_queue);
+  // 	position_queue = queue->data.size-1;
+  // 	//printf("%d\n", position_queue);
 
-  	i = 0;
-  	while(i < 4) {
-  		printf("Se va a consumir la ruta: %s\n", queue->list[position_queue].list);
-  		create_child_process(sons, i, consume_file);
-  		i++;
-  		position_queue--;
-  	}
+  // 	i = 0;
+  // 	while(i < 4) {
+  // 		printf("Se va a consumir la ruta: %s\n", queue->list[position_queue].list);
+  // 		create_child_process(sons, i, consume_file);
+  // 		i++;
+  // 		position_queue--;	
+  // 	}
 
-  	while(position_queue >= 0) {
-  		pause();
-  	}
+  // 	while(position_queue >= 0) {
+  // 		pid_t wpid = wait(&child_status);
+
+		// int index_free = get_index_from_value(sons, 4, wpid);
+		// printf("Se va a consumir la ruta: %s\n", queue->list[position_queue].list);
+		// create_child_process(sons, index_free, consume_file);
+		// position_queue--;
+  // 	}
 
 
 
 	exit(0);
 }
 
-void create_multiple_child_process(int* sons, int num_childdren, void(*action)(char*)) {
-	int i = 0;
-	while(i < num_childdren) {
-		if((sons[i] = fork()) == 0) {
-			//printf("Soy el hijo %d (%d) y mi padre es: %d\n", i, getpid(), getppid());
-			kill(getppid(), SIGUSR1);
-			exit(1);
-		}
 
-		i++;
-	}
-}
 
 void create_child_process(int* sons, int index, void(*action)(char*)) {
-	if((sons[index] = fork()) == 0) {
-		//printf("Soy el hijo %d (%d) y mi padre es: %d\n", index, getpid(), getppid());
-
-		//printf("Voy a consumir: %s\n", queue->list[position_queue].list)
-
+	
+	if((sons[index] = fork())  == 0) {
 		Vector_chars* name_file = get_name_file_without_path(queue->list[position_queue].list, queue->list[position_queue].data.size);
 
 		char* pre_name = "soluciones/validator-";
 		char* filename = (char*)malloc(sizeof(pre_name)*strlen(name_file->list));
 		strcpy(filename, pre_name);
 		strcat(filename, name_file->list);
-		//printf("%s\n", filename);
 
-		fds[index] = open(filename, O_RDWR|O_CREAT);
-		//printf("%d\n",fds[index]);
-		if(fds[index] != -1) {
-			dup2(fds[index], 1);
-			char* args[] = {"valida_uno",queue->list[position_queue].list};
-			execve("valida_uno", args, NULL);
-		}
-		kill(getppid(), SIGUSR1);
+		//printf("Comienza el hijo %d\n", sons[index]);
+		char* args[] = {"valida_uno",queue->list[position_queue].list,filename};
+		execve("valida_uno", args, NULL);
 		exit(0);
 	}
+	
 }
 
 int get_index_from_value(int* list, int size, int value) {
@@ -193,13 +171,13 @@ void search_files(char* dir) {
 
         int i = queue->data.size-1;
 
-        /*printf("Elementos: \n");
+        printf("Elementos: \n");
 
         while(i >= 0) {
         	printf("%s\n", queue->list[i].list);
         	i--;
         }
-        printf("\n\n");*/
+        printf("\n\n");
 	}
 }
 
@@ -238,4 +216,17 @@ Vector_chars* get_name_file_without_path(char* str, int size) {
 
 	return result;
 }
+
+/*void create_multiple_child_process(int* sons, int num_childdren, void(*action)(char*)) {
+	int i = 0;
+	while(i < num_childdren) {
+		if((sons[i] = fork()) == 0) {
+			//printf("Soy el hijo %d (%d) y mi padre es: %d\n", i, getpid(), getppid());
+			kill(getppid(), SIGUSR1);
+			exit(1);
+		}
+
+		i++;
+	}
+}*/
 
