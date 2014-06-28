@@ -30,18 +30,6 @@ int count_slash_from_string(char* str, int size);
 
 Vector_chars* get_name_file_without_path(char* str, int size);
 
-void handler(int sig) {
-	int child_status;
-
-	pid_t wpid = wait(&child_status);
-
-	int index_free = get_index_from_value(sons, 4, wpid);
-	printf("Creamos otro hijo en el hueco %d\n", index_free);
-	create_child_process(sons, index_free);
-	position_queue--;
-
-}
-
 int main(int argc, char** argv)
 {
   	int child_status, i;
