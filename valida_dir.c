@@ -92,12 +92,12 @@ void create_child_process(int* sons, int index) {
 	if((sons[index] = fork())  == 0) {
 		Vector_chars* name_file = get_name_file_without_path(queue->list[position_queue].list, queue->list[position_queue].data.size);
 
-
 		char* pre_name = "validator-";
 		char* filename = (char*)malloc(sizeof(dirout)*sizeof(pre_name)*sizeof(name_file->list));
 		strcpy(filename, dirout);
 		strcat(filename, pre_name);
 		strcat(filename, name_file->list);
+
 
 		execl("valida_uno", "valida_uno", queue->list[position_queue].list, filename, (char *) 0);
 		perror("Error in valida_uno process");
@@ -139,7 +139,7 @@ void search_files(char* dir) {
 		execl("busca_program", "busca_program", dir, "-n", ".txt", "-print", (char *) 0);
 		perror("Error in busca_program");
 		exit(0);
-		
+
 	} else {
 		close(filedes[1]);
 
@@ -207,6 +207,8 @@ Vector_chars* get_name_file_without_path(char* str, int size) {
 		}
 		i++;
 	}
+
+	push_back_char(result, '\0');
 
 	return result;
 }
