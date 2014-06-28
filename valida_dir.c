@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 
   	i = 0;
   	while(i < group_proceses) {
-  		printf("Se va a consumir la ruta: %s\n", queue->list[position_queue].list);
+  		printf("Se va a validar el fichero: %s\n", queue->list[position_queue].list);
   		create_child_process(sons, i);
   		i++;
   		position_queue--;
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
 
   		if(position_queue >= 0) {
 			int index_free = get_index_from_value(sons, group_proceses, wpid);
-			printf("Se va a consumir la ruta: %s\n", queue->list[position_queue].list);
+			printf("Se va a validar el fichero: %s\n", queue->list[position_queue].list);
 			create_child_process(sons, index_free);
 			position_queue--;
 			nproceses++;
@@ -157,6 +157,7 @@ void search_files(char* dir) {
 			if(buffer[0] != '\n') {
 				push_back_char(str, buffer[0]);
 			} else {
+				push_back_char(str, '\0');
 				push_back_char_pointer(queue, str);
 				init = 1;
 			}
