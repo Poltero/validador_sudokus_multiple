@@ -8,13 +8,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-int nproceses = 0, groups = 4, position_queue = 0, child_status;
+int nproceses = 0, group_proceses = 0, position_queue = 0;
 
 
 Vector_pointers_char* queue;
 
-pid_t sons[4];
+pid_t* sons;
 
+char *dirin, *dirout;
 
 void create_child_process(int* sons, int index);
 
@@ -31,15 +32,34 @@ Vector_chars* get_name_file_without_path(char* str, int size);
 int main(int argc, char** argv)
 {
   	int child_status, i;
+
+  	if(argc < 4) {
+  		printf("Error: Malformed\n");
+  		exit(0);
+  	}
 	
+	dirin = argv[1];
+	dirout = argv[2];
+	group_proceses = atoi(argv[3]);
 
-  	search_files("ficheros/");
+	if(group_proceses <= 0) {
+		printf("Hay %d validadores para crear, por lo que el programa termina aqui\n", group_proceses);
+		exit(0);
+	}
 
+  	search_files(dirin);
+
+  	if(group_proceses > queue->data.size) {
+  		group_proceses = queue->data.size;
+  		printf("Hay mas validadores que el numero de tareas (%d). Se crearan solo %d validadores\n", group_proceses,group_proceses);
+  	}
+
+  	sons = (pid_t*) realloc(NULL, sizeof(pid_t)*group_proceses);
 
   	position_queue = queue->data.size-1;
 
   	i = 0;
-  	while(i < 4) {
+  	while(i < group_proceses) {
   		printf("Se va a consumir la ruta: %s\n", queue->list[position_queue].list);
   		create_child_process(sons, i);
   		i++;
@@ -52,7 +72,7 @@ int main(int argc, char** argv)
   		nproceses--;
 
   		if(position_queue >= 0) {
-			int index_free = get_index_from_value(sons, 4, wpid);
+			int index_free = get_index_from_value(sons, group_proceses, wpid);
 			printf("Se va a consumir la ruta: %s\n", queue->list[position_queue].list);
 			create_child_process(sons, index_free);
 			position_queue--;
@@ -73,14 +93,14 @@ void create_child_process(int* sons, int index) {
 		Vector_chars* name_file = get_name_file_without_path(queue->list[position_queue].list, queue->list[position_queue].data.size);
 
 
-		char* pre_name = "soluciones/validator-";
-		char* filename = (char*)malloc(sizeof(pre_name)*strlen(name_file->list));
-		strcpy(filename, pre_name);
+		char* pre_name = "validator-";
+		char* filename = (char*)malloc(sizeof(dirout)*sizeof(pre_name)*sizeof(name_file->list));
+		strcpy(filename, dirout);
+		strcat(filename, pre_name);
 		strcat(filename, name_file->list);
 
 		execl("valida_uno", "valida_uno", queue->list[position_queue].list, filename, (char *) 0);
 		perror("Error in valida_uno process");
-		printf("INFO: filename: %s. path: %s\n", filename, queue->list[position_queue].list);
 		exit(0);
 	}
 	
@@ -117,10 +137,9 @@ void search_files(char* dir) {
 		close(filedes[0]);
 
 		execl("busca_program", "busca_program", dir, "-n", ".txt", "-print", (char *) 0);
-
-		//close(filedes[1]);
-
-		exit(1);
+		perror("Error in busca_program");
+		exit(0);
+		
 	} else {
 		close(filedes[1]);
 
@@ -148,13 +167,13 @@ void search_files(char* dir) {
 
         int i = queue->data.size-1;
 
-        printf("Elementos: \n");
+        /*printf("Elementos: \n");
 
         while(i >= 0) {
         	printf("%s\n", queue->list[i].list);
         	i--;
         }
-        printf("\n\n");
+        printf("\n\n");*/
 	}
 }
 
