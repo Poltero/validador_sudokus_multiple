@@ -16,8 +16,6 @@ Vector_pointers_char* queue;
 pid_t sons[4];
 
 
-void create_multiple_child_process(int* sons, int num_childdren, void(*action)(char*));
-
 void create_child_process(int* sons, int index);
 
 void consume_file(char* path);
@@ -100,10 +98,6 @@ int get_index_from_value(int* list, int size, int value) {
 
 	return -2;
 
-}
-
-void consume_file(char* path) {
-	//consume
 }
 
 void search_files(char* dir) {
